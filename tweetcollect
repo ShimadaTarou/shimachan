@@ -1,0 +1,14 @@
+#つぶやきを格納するリスト
+tweets_data =[]
+tweets_username =[]
+tweets_time =[]
+tweets_retweet =[]
+tweets_favorite =[]
+for tweet in tweepy.Cursor(api.user_timeline, id="ユーザーネーム（＠から後ろ）").items(100):
+#if文にてRTとリプライを除外
+    if (list(tweet.text)[:2]!=['R', 'T']) & (list(tweet.text)[0]!='@'):
+        tweets_data.append(tweet.text + '\n')
+        tweets_username.append(tweet.user.name + "\n")
+        tweets_time.append(tweet.created_at.strftime('%Y/%m/%d %H:%M:%S') + "\n")
+        tweets_retweet.append(tweet.retweet_count)
+        tweets_favorite.append(tweet.favorite_count)
