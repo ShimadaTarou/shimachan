@@ -1,0 +1,11 @@
+#jupyternotebook内でmatplotlibで図を描写するときの必須のおまじない
+%matplotlib inline 
+import matplotlib.pyplot as plt
+
+# おまじない: 以下を実行するとプロットスタイルが変更されていい感じになる
+plt.style.use('ggplot')
+
+from matplotlib.font_manager import FontProperties
+
+font_path = 'jupyter/TakaoPGothic.ttf'  #DLしたパスを指定. /font以下でなくても良い
+font_prop = FontProperties(fname=font_path)
