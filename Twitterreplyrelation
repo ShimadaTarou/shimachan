@@ -1,0 +1,121 @@
+#ツイート直近100件のリプを集計し上位2名のtwitterアイコンを取ってきて、画像を合成し新たな画像を生成するプログラム
+
+import tweepy
+import datetime
+
+#Twitter APIを使用するためのConsumerキー、アクセストークン設定
+Consumer_key = ''
+Consumer_secret = ''
+Access_token = ''
+Access_secret = ''
+
+#認証
+auth = tweepy.OAuthHandler(Consumer_key, Consumer_secret)
+auth.set_access_token(Access_token, Access_secret)
+
+api = tweepy.API(auth, wait_on_rate_limit = True)
+#APIの利用制限に引っかかった時に、必要時間だけ待機してくれる」という設定
+
+#つぶやきを格納するリスト
+tweets_reply_username =[]
+for tweet in tweepy.Cursor(api.user_timeline, id="").items(100):
+    #if文にてRTとリプライを除外
+    if (list(tweet.text)[:2]!=['R', 'T']) & (list(tweet.text)[0]=='@'):
+        tweets_reply_username.append(tweet.in_reply_to_screen_name)
+        
+maid_count = {}
+for tweet in tweets_reply_username:
+    #取得したツイートユーザーが辞書になければ1と設定、あったらプラス1していく
+    if tweet in maid_count:
+        maid_count[tweet] += 1
+    else:
+        maid_count[tweet] = 1
+
+import collections
+from collections import Counter
+
+#tweets_reply_usernameを回数でソートする。結果は要素、回数のタプルで返ってくる。
+#結果的に上記maid_countはいらなかった。
+a = Counter(tweets_reply_username)
+b = a.most_common()
+
+#タプルとなっていて、タプルの2つ目の数字が邪魔。取り出すときにメイド名だけほしいのでタプルをリストに変換し、タプルを削除し、また変数として定義。
+#取り出すときはこの処理を行えばいい。
+list2 = []
+for i in range(10):
+    list1 = list(b[i])
+    del list1[1]
+    list2.append(list1)
+def flatten(nested_list):
+    """2重のリストをフラットにする関数"""
+    return [e for inner_list in nested_list for e in inner_list]
+ 
+list3 = flatten(list2)
+
+#ここからツイッターのアイコンを保存するコード
+import os
+from time import sleep
+import urllib.error
+import urllib.request
+
+
+
+def download_file(url, dst_path):
+   try:
+       with urllib.request.urlopen(url) as web_file:
+           data = web_file.read()
+           with open(dst_path, mode='wb') as local_file:
+               local_file.write(data)
+   except urllib.error.URLError as e:
+       print(e)
+
+if not os.path.exists('img3'):
+   os.mkdir('img3')
+
+i = 0
+
+for j in list3[:2]:
+    try:
+            usr = api.get_user(j)
+            img_url = usr.profile_image_url_https
+            dst_path = 'img3/{}.png'.format(i)
+            download_file(img_url,dst_path)
+            i += 1
+            sleep(1)
+    except:
+            pass
+
+#ここからopencvで画像を合成し画像を生成する
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+%matplotlib inline
+
+img1 = cv2.imread('img3/0.png',cv2.IMREAD_COLOR)
+img2 = cv2.imread('img3/1.png',cv2.IMREAD_COLOR)
+img3 = cv2.imread("img3/cheki.jpg",cv2.IMREAD_COLOR)
+
+orgHeight, orgWidth = img1.shape[:2]
+size1 = (orgHeight*3, orgWidth*3)
+img1 = cv2.resize(img1, size1, interpolation = cv2.INTER_LINEAR)
+orgHeight, orgWidth = img2.shape[:2]
+size2 = (orgHeight*3, orgWidth*3)
+img2 = cv2.resize(img2, size2, interpolation = cv2.INTER_LINEAR)
+
+#処理領域を設定(left(x1), top(y1), right(x2), bottom(y2))
+roi = (516,800, 660, 944)
+
+s_roi = img3[roi[1]: roi[3], roi[0]: roi[2]]
+
+dst = cv2.addWeighted(s_roi,0,img1,1,0)
+#s_roi、img2の後の数字は重さ.足して１になるように設定する。img2の重さを1にすることでそのままの明るさで貼り付けられる。
+img3[roi[1]: roi[3], roi[0]: roi[2]] = dst
+
+roi = (516,1500, 660, 1644)
+s_roi = img3[roi[1]: roi[3], roi[0]: roi[2]]
+
+dst = cv2.addWeighted(s_roi,0,img2,1,0)
+#s_roi、img2の後の数字は重さ.足して１になるように設定する。img2の重さを1にすることでそのままの明るさで貼り付けられる。
+img3[roi[1]: roi[3], roi[0]: roi[2]] = dst
+
+cv2.imwrite('img4.jpg', img3, [cv2.IMWRITE_JPEG_QUALITY, 100])
